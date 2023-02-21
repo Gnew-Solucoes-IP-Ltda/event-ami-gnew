@@ -2,6 +2,21 @@ from typing import List
 from event_ami_gnew.events import Event
 
 
+def str2int(value: str) -> int:
+    if value:
+        return int(value)
+    
+    return None
+    
+def str2bool(value: str) -> bool:
+    return not value == '0'
+
+def get_value(key: str, values_dict: dict):
+    if key in values_dict:
+        return values_dict[key]
+
+    return None
+
 class Queue:
     
     def __init__(
@@ -47,10 +62,111 @@ class Queue:
         }
 
 
+class Callerid:
+
+    def __init__(self, num: str, name: str) -> None:
+        self.num = num
+        self.name = name
+    
+    @property
+    def data(self) -> dict:
+        return {
+            "num": self.num,
+            "name": self.name
+        }
+
+
+class Call:
+
+    def __init__(self, uniqueid: str, callerid_num: str, callerid_name: str, linkedid: str=None,position: int=None, count: int=None) -> None:
+        self.uniqueid = uniqueid
+        self.linkedid = linkedid
+        self.position = str2int(position)
+        self.count = str2int(count)
+        self.callerid = Callerid(callerid_num, callerid_name)
+        self.key = uniqueid
+    
+    @property
+    def data(self) -> dict:
+        return {
+            "callerid": self.callerid.data,
+            "uniqueid": self.uniqueid,
+            "linkedid": self.linkedid,
+            "position": self.position,
+            "count": self.count
+        }
+    
+
+class Calls:
+
+    class DoesExists(Exception):
+        ...
+
+    def __init__(self) -> None:
+        self._data = {}
+    
+    def all(self, serialized: bool=False) -> List[Call]:
+        
+        if serialized:
+            return [self._data[key].data for key in self._data]
+
+        return [self._data[key] for key in self._data]
+    
+    def get_uniqueid(self, event: Event) -> str:
+        return event.data['Uniqueid']
+    
+    def exists(self, key: str) -> bool:
+        return key in self._data
+    
+    def validate_data(self, key: str) -> None:
+        if not self.exists(key):
+            raise Calls.DoesExists()
+    
+    def count(self) -> int:
+        return len(self._data)
+    
+    def get(self, key: str) -> Call:
+        self.validate_data(key)
+        return self._data[key]
+    
+    def create(self, event: Event) -> Call:
+        key = self.get_uniqueid(event)
+        call = Call(
+            uniqueid=event.data['Uniqueid'],
+            linkedid=event.data['Linkedid'],
+            callerid_name=event.data['CallerIDName'],
+            callerid_num=event.data['CallerIDNum'],
+            count=str2int(get_value('Count', event.data)),
+            position=str2int(get_value('Position', event.data))
+        )
+        self._data[key] = call
+        return call
+
+    def update(self, event: Event) -> Call:
+        key = self.get_uniqueid(event)
+
+        if event.type in ['QueueCallerLeave', 'BridgeLeave']:
+            return self.delete(key)
+
+        if not self.exists(key):
+            return self.create(event)
+        
+        call = self.get(key)
+        call.linkedid = event.data['Linkedid']
+        call.position = str2int(get_value('Count', event.data))
+        call.count = str2int(get_value('Position', event.data))
+        return call
+
+    def delete(self, key: str) -> None:
+        self.validate_data(key)
+        del self._data[key]
+    
+
 class QueueGroup:
 
     def __init__(self, queuename: str) -> None:
         self.queuename = queuename
+        self.calls_waiting = Calls()
         self.unavailable_members = []
         self.idle_members = []
         self.busy_members = []
@@ -161,6 +277,7 @@ class QueueGroup:
             "paused_members": self.paused_members,
             "ringing_members": self.ringing_members,
             "members": self.members,
+            "calls_waiting": self.calls_waiting.all(serialized=True)
         }
     
     
@@ -171,12 +288,6 @@ class EndpointQueues:
 
     def __init__(self):
         self._data = {}
-    
-    def str2int(self, value: str) -> int:
-        return int(value)
-    
-    def str2bool(self, value: str) -> bool:
-        return not value == '0'
     
     def get_key(self, event: Event) -> str:
         return event.data['Queue']
@@ -206,10 +317,10 @@ class EndpointQueues:
         key = self.get_key(event)
         queue = Queue(
             queuename=key,
-            calls_taken=self.str2int(event.data['CallsTaken']),
+            calls_taken=str2int(event.data['CallsTaken']),
             paused_reason=event.data['PausedReason'],
-            paused=self.str2bool(event.data['Paused']),
-            penalty=self.str2int(event.data['Penalty']),
+            paused=str2bool(event.data['Paused']),
+            penalty=str2int(event.data['Penalty']),
             last_call=event.data['LastCall']
         )
         self._data[key] = queue
@@ -221,11 +332,11 @@ class EndpointQueues:
         
         queue = self.get(event.key)
         queue.update_pause_event(
-            paused=self.str2bool(event.data['Paused']), 
+            paused=str2bool(event.data['Paused']), 
             paused_reason=event.data['PausedReason']
         )
         queue.update_penalty_event(
-            penalty=self.str2int(event.data['Penalty'])
+            penalty=str2int(event.data['Penalty'])
         )
         queue.update_calls_event(
             calls_taken = event.data['CallsTaken'],
@@ -240,6 +351,7 @@ class Endpoint:
         self.device = device
         self.state = state
         self.queues = EndpointQueues()
+        self.calls = Calls()
 
     @property
     def data(self) -> dict:

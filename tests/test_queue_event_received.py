@@ -35,7 +35,8 @@ class QueueEventReceivedTestCase(TestCase):
             "busy_members": [],
             "paused_members": [],
             "ringing_members": [],
-            "members": ['SIP/IP100']
+            "members": ['SIP/IP100'],
+            "calls_waiting": []
         }
         self.assertDictEqual(queue_group.data, expect_data)
         event_received = {
@@ -52,7 +53,8 @@ class QueueEventReceivedTestCase(TestCase):
             "busy_members": ['SIP/IP100'],
             "paused_members": [],
             "ringing_members": [],
-            "members": ['SIP/IP100']
+            "members": ['SIP/IP100'],
+            "calls_waiting": []
         }
         self.assertDictEqual(queue_group.data, expect_data)
         event_received = {
@@ -69,7 +71,8 @@ class QueueEventReceivedTestCase(TestCase):
             "busy_members": [],
             "paused_members": [],
             "ringing_members": [],
-            "members": ['SIP/IP100']
+            "members": ['SIP/IP100'],
+            "calls_waiting": []
         }
         self.assertDictEqual(queue_group.data, expect_data)
         event_received = {
@@ -86,7 +89,8 @@ class QueueEventReceivedTestCase(TestCase):
             "busy_members": [],
             "paused_members": [],
             "ringing_members": ['SIP/IP100'],
-            "members": ['SIP/IP100']
+            "members": ['SIP/IP100'],
+            "calls_waiting": []
         }
         self.assertDictEqual(queue_group.data, expect_data)
         event_received = {
@@ -103,6 +107,7 @@ class QueueEventReceivedTestCase(TestCase):
             "busy_members": [],
             "paused_members": [],
             "ringing_members": [],
-            "members": ['SIP/IP100']
+            "members": ['SIP/IP100'],
+            "calls_waiting": []
         }
         self.assertDictEqual(queue_group.data, expect_data)

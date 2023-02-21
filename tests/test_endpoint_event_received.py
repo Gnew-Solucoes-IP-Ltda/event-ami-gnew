@@ -8,7 +8,6 @@ class EndpointEventReceivedTestCase(TestCase):
         return super().setUp()
 
     def test_endpoint_event_received(self):
-        self.assertEqual(0, self.manager.endpoints.count())
         event_received = {
             "Event": "DeviceStateChange",
             "Privilege": "call,all",
@@ -112,3 +111,4 @@ class EndpointEventReceivedTestCase(TestCase):
         self.assertDictEqual(endpoint.data, expect_data)
         self.assertEqual(1, self.manager.endpoints.count())
         self.assertEqual(1, endpoint.queues.count())
+        

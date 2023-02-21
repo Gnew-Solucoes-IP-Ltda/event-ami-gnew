@@ -17,7 +17,7 @@ with open("README.md", "r") as arq:
 
 setup(
     name='event-ami-asterisk',
-    version='0.0.1',
+    version='0.1.0',
     license='MIT License',
     author='Tatianno Alves',
     long_description=readme,

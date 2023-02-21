@@ -4,7 +4,6 @@ from event_ami_gnew.entities import Endpoint, QueueGroup
 
 
 class EndpointsManager:
-
     _data = {}
 
     class DoesExists(Exception):
@@ -99,14 +98,25 @@ class QueuesGroupManager:
 class GnewManagerAMIEvents:
     endpoints = EndpointsManager()
     queues = QueuesGroupManager()
+    _updated_objects = []
+
+    def _add_updated_objects(self, obj: object) -> None:
+        if obj not in self._updated_objects:
+            self._updated_objects.append(obj)
+    
+    def get_updated_objects(self) -> List[object]:
+        updated_objects = self._updated_objects
+        self._updated_objects = []
+        return updated_objects
 
     def _update_queue_event(self, device: str, state: str, queuename: str, paused: bool) -> None:
-        self.queues.update(
+        queue_group = self.queues.update(
             device=device, 
             state=state,
             queuename=queuename,
             paused=paused
         )
+        self._add_updated_objects(queue_group)
     
     def _update_endpoint_queues(self, endpoint: Endpoint) -> None:
         for queue in endpoint.queues.all():
@@ -121,7 +131,8 @@ class GnewManagerAMIEvents:
         if event.type == 'DeviceStateChange' and 'SIP/' in event.key:
             endpoint = self.endpoints.update(event)
             self._update_endpoint_queues(endpoint)
-    
+            self._add_updated_objects(endpoint)
+            
     def _update_queue_member_event(self, event: Event) -> None:
         if event.type == 'QueueMemberStatus':
             if self.endpoints.exists(event.key):
@@ -133,9 +144,24 @@ class GnewManagerAMIEvents:
                     queue.queuename,
                     queue.paused
                 )
+                self._add_updated_objects(endpoint)
+    
+    def _update_queue_calls_event(self, event: Event) -> None:
+        if event.type in ['QueueCallerJoin', 'QueueCallerLeave']:
+            queue_group = self.queues.get_or_create(event.data['Queue'])
+            queue_group.calls_waiting.update(event)
+            self._add_updated_objects(queue_group)
+    
+    def _update_endpoint_calls_event(self, event: Event) -> None:
+        if event.type in ['BridgeEnter', 'BridgeLeave']:
+            endpoint = self.endpoints.get(event.key)
+            endpoint.calls.update(event)
+            self._add_updated_objects(endpoint)
 
     def update(self, event_received: dict) -> None:
         event = Event(event_received)
         self._update_device_event(event)
         self._update_queue_member_event(event)
+        self._update_queue_calls_event(event)
+        self._update_endpoint_calls_event(event)
         del event
