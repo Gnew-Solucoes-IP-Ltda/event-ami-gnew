@@ -15,4 +15,4 @@ GnewManagerAMIEvents officially supports Python 3.8+.
 
 ## Cloning the repository
 
-`$ git clone https://github.com/Gnew-Solucoes-IP-Ltda/online.git`
+`$ git clone https://github.com/Gnew-Solucoes-IP-Ltda/event-ami-gnew.git`
