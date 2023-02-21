@@ -1,5 +1,5 @@
 from typing import List
-from events import Event
+from event_ami_gnew.events import Event
 
 
 class Queue:

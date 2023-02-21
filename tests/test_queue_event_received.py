@@ -1,11 +1,11 @@
 from unittest import TestCase
-from managers import Manager
+from event_ami_gnew.managers import GnewManagerAMIEvents
 
 
 class QueueEventReceivedTestCase(TestCase):
 
     def setUp(self) -> None:
-        self.manager = Manager()
+        self.manager = GnewManagerAMIEvents()
         return super().setUp()
 
     def test_queue_group_event_received(self):

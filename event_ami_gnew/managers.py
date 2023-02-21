@@ -1,5 +1,6 @@
-from events import Event
-from entities import Endpoint, QueueGroup
+from typing import List
+from event_ami_gnew.events import Event
+from event_ami_gnew.entities import Endpoint, QueueGroup
 
 
 class EndpointsManager:
@@ -20,7 +21,10 @@ class EndpointsManager:
         return len(self._data)
             
     def exists(self, device: str) -> bool:
-        return device in self._data      
+        return device in self._data   
+
+    def all(self) -> List[Endpoint]:
+        return [self._data[key] for key in self._data]
     
     def create(self, event: Event) -> Endpoint:
         state = self.get_state(event)
@@ -52,8 +56,18 @@ class EndpointsManager:
 class QueuesGroupManager:
     _data = {}
 
+    class DoesExists(Exception):
+        ...
+
     def exists(self, key: str) -> bool:
         return key in self._data
+    
+    def validate_data(self, queuename: str) -> None:
+        if not self.exists(queuename):
+            raise QueuesGroupManager.DoesExists()
+    
+    def all(self) -> List[QueueGroup]:
+        return [self._data[key] for key in self._data]
     
     def create(self, queuename: str) -> QueueGroup:
         queue_group = QueueGroup(
@@ -63,6 +77,7 @@ class QueuesGroupManager:
         return queue_group
     
     def get(self, queuename: str) -> QueueGroup:
+        self.validate_data(queuename)
         return self._data[queuename]
     
     def get_or_create(self, queuename: str) -> QueueGroup:
@@ -75,9 +90,13 @@ class QueuesGroupManager:
         queue_group = self.get_or_create(queuename)
         queue_group.update(device, state, paused)
         return queue_group
+    
+    def delete(self, queuename: str) -> None:
+        self.validate_data(queuename)
+        del self._data[queuename]
 
         
-class Manager:
+class GnewManagerAMIEvents:
     endpoints = EndpointsManager()
     queues = QueuesGroupManager()
 
@@ -119,3 +138,4 @@ class Manager:
         event = Event(event_received)
         self._update_device_event(event)
         self._update_queue_member_event(event)
+        del event

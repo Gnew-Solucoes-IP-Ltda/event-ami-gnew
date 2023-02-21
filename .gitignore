@@ -1,0 +1,5 @@
+event_ami_asterisk.egg-info/
+build/
+dist/
+__pycache__/
+venv/
